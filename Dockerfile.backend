@@ -1,0 +1,20 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install only production deps
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY backend/ ./backend/
+COPY scripts/ ./scripts/
+COPY gunicorn.conf.py ./gunicorn.conf.py
+COPY .env.example ./.env
+
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+
+# Use gunicorn + uvicorn workers for production concurrency.
+# Worker count is controlled by WEB_CONCURRENCY (default: 2×CPU+1, max 8).
+CMD ["gunicorn", "backend.main:app", "-c", "gunicorn.conf.py"]

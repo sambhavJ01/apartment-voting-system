@@ -1,0 +1,70 @@
+version: "3.9"
+
+# ────────────────────────────────────────────────────────────
+# Horizontal scaling (SQLite — single-node data volume):
+#   docker compose up --scale backend=4
+#
+# For true multi-node scaling, switch DATABASE_URL to PostgreSQL
+# and remove the voting_data volume mount from backend.
+# ────────────────────────────────────────────────────────────
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    # No container_name so `--scale backend=N` works
+    expose:
+      - "8000"                # internal only — nginx is the external gateway
+    volumes:
+      - voting_data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:////app/data/voting_system.db
+      - OTP_PROVIDER=${OTP_PROVIDER:-console}
+      - SECRET_KEY=${SECRET_KEY:-change_in_production}
+      - OTP_SECRET_SALT=${OTP_SECRET_SALT:-change_in_production}
+      - ANON_VOTE_SALT=${ANON_VOTE_SALT:-change_in_production}
+      - ADMIN_REGISTRATION_KEY=${ADMIN_REGISTRATION_KEY:-ADMIN_SECRET_CHANGE_THIS}
+      - WEB_CONCURRENCY=${WEB_CONCURRENCY:-4}
+      - REDIS_URL=${REDIS_URL:-}
+      # Twilio (populate in .env if using)
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
+      - TWILIO_WHATSAPP_FROM=${TWILIO_WHATSAPP_FROM:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: voting_frontend
+    expose:
+      - "8501"                # internal only — nginx proxies to port 80
+    environment:
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: voting_nginx
+    ports:
+      - "80:80"               # Streamlit UI
+      - "8000:8000"           # FastAPI (API clients, Postman, etc.)
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  voting_data:
+    driver: local
