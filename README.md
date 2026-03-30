@@ -228,3 +228,11 @@ Interactive docs: **http://localhost:8000/docs**
 | GET    | /reports/topics/{id}/export/excel    | Admin    | Excel export                |
 | GET    | /reports/audit-logs                  | Admin    | Audit log                   |
 | POST   | /admin/bootstrap                     | Key      | First-time admin creation   |
+
+
+## Screenshots
+
+<img width="1920" height="911" alt="image" src="https://github.com/user-attachments/assets/28ba9787-16d2-4fa9-8ca4-7c9efd3d7eb3" />
+
+<img width="1551" height="704" alt="image" src="https://github.com/user-attachments/assets/2dd9db50-757e-44e7-8a84-666f34811a7e" />
+
